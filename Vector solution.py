@@ -96,7 +96,9 @@ class _2D_square_world_:
         else:
             print err_mess
 
-rep_pattern_w = _2D_square_world_(500)
+SIZE_of_world = 650
+
+rep_pattern_w = _2D_square_world_(SIZE_of_world)
 
 def fill_in_with_circular_pattern (world, density, amount_of_segments) :
 
@@ -123,8 +125,7 @@ def fill_in_with_circular_pattern (world, density, amount_of_segments) :
 
     #repeat segment across circle
     new_arr = []
-    for p in range (len(world.points)):
-        point_radius = math.sqrt(world.points[p][0]*world.points[p][0]+world.points[p][1]*world.points[p][1])             
+    for p in range (len(world.points)):            
         for re in range(amount_of_segments):
             shift = math.radians(radius_of_one_strip*re)
             angle = shift
@@ -136,21 +137,69 @@ def fill_in_with_circular_pattern (world, density, amount_of_segments) :
     #append new segments to array
     for p in new_arr:
         world.points.append(p)
+
+amount_of_segments = 4
+fill_in_with_circular_pattern(rep_pattern_w, 5000, amount_of_segments)
+
+##map depth map to proccess second stereo pair
+import cv2
+## Force DEPTH MAP to the size of array
+depth_map = cv2.imread('asd.jpg',0)
+depth_map = cv2.resize(depth_map, (SIZE_of_world , SIZE_of_world))
+
+##--- translate coordinates of current world to image coordinates
+offset = SIZE_of_world/2
+
+for p in range (len(rep_pattern_w.points)):
+    rep_pattern_w.points[p][0] = int(rep_pattern_w.points[p][0]+offset)
+    rep_pattern_w.points[p][1] = int(rep_pattern_w.points[p][1]+offset)
+
+#create another world with shifted values
+# - - -
+# - - -
+# - - -
+def map_range(value, leftMin, leftMax, rightMin, rightMax):
+    leftSpan = leftMax - leftMin
+    rightSpan = rightMax - rightMin
+    valueScaled = float(value - leftMin) / float(leftSpan)
+    return rightMin + (valueScaled * rightSpan)
+
+shifted_pattern_w =  _2D_square_world_(SIZE_of_world)
+
+for p in range (len(rep_pattern_w.points)):
+    pick_integer_for_row    = rep_pattern_w.points[p][1]
+    pick_integer_for_column = rep_pattern_w.points[p][0]
+    shift_val = depth_map[pick_integer_for_row][pick_integer_for_column]
+    full_angle_of_circle = float(360)
+    radius_of_one_strip = float(full_angle_of_circle) / float(amount_of_segments)
+    normalised_shift_val = map_range(shift_val, 0, 255, 0, radius_of_one_strip)
+    angle = math.radians(normalised_shift_val)
+    X = (math.cos(angle) * rep_pattern_w.points[p][0]) - (math.sin(angle) * rep_pattern_w.points[p][1])
+    Y = (math.sin(angle) * rep_pattern_w.points[p][0]) + (math.cos(angle) * rep_pattern_w.points[p][1])
+    mapped_X = X - offset
+    mapped_Y = Y - offset
+    shifted_pattern_w.add_point(X,Y)
     
-fill_in_with_circular_pattern(rep_pattern_w, 500, 4)
-
-##print rep_pattern_w.points
-
-
 #add artificial corners to keep size of plot
-rep_pattern_w.add_point(rep_pattern_w.corners[0][0],rep_pattern_w.corners[0][1])
-rep_pattern_w.add_point(rep_pattern_w.corners[2][0],rep_pattern_w.corners[2][1])
+##rep_pattern_w.add_point(rep_pattern_w.corners[0][0],rep_pattern_w.corners[0][1])
+##rep_pattern_w.add_point(rep_pattern_w.corners[2][0],rep_pattern_w.corners[2][1])
+##
+###add artificial corners to keep size of plot
+##shifted_pattern_w.add_point(shifted_pattern_w.corners[0][0],shifted_pattern_w.corners[0][1])
+##shifted_pattern_w.add_point(shifted_pattern_w.corners[2][0],shifted_pattern_w.corners[2][1])
 
 ##plot data
 data = np.array(rep_pattern_w.points)
 x, y = data.T
-plt.scatter(x,y)
+plt.scatter(x,y,marker='.')
 plt.axis('equal')
 plt.show ( )
+
+##plot data
+data = np.array(shifted_pattern_w.points)
+x, y = data.T
+plt.scatter(x,y,marker='.')
+plt.axis('equal')
+plt.show (  )
 
 
