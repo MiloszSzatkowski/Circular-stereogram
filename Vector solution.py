@@ -96,7 +96,7 @@ class _2D_square_world_:
         else:
             print err_mess
 
-SIZE_of_world = 650
+SIZE_of_world = 6000
 
 rep_pattern_w = _2D_square_world_(SIZE_of_world)
 
@@ -138,8 +138,8 @@ def fill_in_with_circular_pattern (world, density, amount_of_segments) :
     for p in new_arr:
         world.points.append(p)
 
-amount_of_segments = 4
-fill_in_with_circular_pattern(rep_pattern_w, 5000, amount_of_segments)
+amount_of_segments = 8
+fill_in_with_circular_pattern(rep_pattern_w, 8500, amount_of_segments)
 
 ##map depth map to proccess second stereo pair
 import cv2
@@ -149,10 +149,6 @@ depth_map = cv2.resize(depth_map, (SIZE_of_world , SIZE_of_world))
 
 ##--- translate coordinates of current world to image coordinates
 offset = SIZE_of_world/2
-
-for p in range (len(rep_pattern_w.points)):
-    rep_pattern_w.points[p][0] = int(rep_pattern_w.points[p][0]+offset)
-    rep_pattern_w.points[p][1] = int(rep_pattern_w.points[p][1]+offset)
 
 #create another world with shifted values
 # - - -
@@ -167,8 +163,8 @@ def map_range(value, leftMin, leftMax, rightMin, rightMax):
 shifted_pattern_w =  _2D_square_world_(SIZE_of_world)
 
 for p in range (len(rep_pattern_w.points)):
-    pick_integer_for_row    = rep_pattern_w.points[p][1]
-    pick_integer_for_column = rep_pattern_w.points[p][0]
+    pick_integer_for_row    = int(rep_pattern_w.points[p][1]+offset)
+    pick_integer_for_column = int(rep_pattern_w.points[p][0]+offset)
     shift_val = depth_map[pick_integer_for_row][pick_integer_for_column]
     full_angle_of_circle = float(360)
     radius_of_one_strip = float(full_angle_of_circle) / float(amount_of_segments)
@@ -176,8 +172,6 @@ for p in range (len(rep_pattern_w.points)):
     angle = math.radians(normalised_shift_val)
     X = (math.cos(angle) * rep_pattern_w.points[p][0]) - (math.sin(angle) * rep_pattern_w.points[p][1])
     Y = (math.sin(angle) * rep_pattern_w.points[p][0]) + (math.cos(angle) * rep_pattern_w.points[p][1])
-    mapped_X = X - offset
-    mapped_Y = Y - offset
     shifted_pattern_w.add_point(X,Y)
     
 #add artificial corners to keep size of plot
@@ -191,15 +185,17 @@ for p in range (len(rep_pattern_w.points)):
 ##plot data
 data = np.array(rep_pattern_w.points)
 x, y = data.T
-plt.scatter(x,y,marker='.')
+plt.scatter(x,y,marker='o',linewidth=None,s=0.5)
 plt.axis('equal')
+plt.axis('off')
 plt.show ( )
 
 ##plot data
 data = np.array(shifted_pattern_w.points)
 x, y = data.T
-plt.scatter(x,y,marker='.')
+plt.scatter(x,y,marker='o',linewidth=None,s=0.25)
 plt.axis('equal')
+plt.axis('off')
 plt.show (  )
 
 
