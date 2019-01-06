@@ -15,26 +15,7 @@ def is_in_range (num, _min, _max):
     else:
         return False
 
-# radius -> global_radius of outer circle
-# x, y -> coordinates of my point
-# percent -> size of circle sector in %
-# startAngle -> start of arc calculated from flat [0,0] to [max_width_right,0]
-# https://www.geeksforgeeks.org/check-whether-point-exists-circle-sector-not/
-def is_this_point_in_section_of_circle(radius, x, y, percent, startAngle): 
-    # endAngle 
-    endAngle = (360 / percent) + startAngle 
-    # polar co-ordinates 
-    polarradius = math.sqrt(x * x + y * y) 
-    Angle = math.atan(y / x) 
-    # --
-    if (Angle >= startAngle and Angle <= endAngle and polarradius < radius): 
-        return True
-    else: 
-        return False
-
-#--
-# https://stackoverflow.com/questions/13652518/efficiently-find-points-inside-a-circle-sector
-#--
+#efficiently find points inside a circle sector
 
 class rel:
     def __init__ (self, x, y):
@@ -69,6 +50,13 @@ def isWithinRadius(v, radiusSquared):
     else:
         return False
 
+def angle_bet_2vec(a,b):
+    x1, y1 = a
+    x2, y2 = b
+    dot = x1*x2 + y1*y2      # dot product
+    det = x1*y2 - y1*x2      # determinant
+    angle = math.atan2(det, dot)  # atan2(y, x) or atan2(sin, cos)
+    return angle
 
 ##classes
 ##-------------------------------------------
@@ -108,14 +96,6 @@ class _2D_square_world_:
         else:
             print err_mess
 
-def angle_bet_2vec(a,b):
-    x1, y1 = a
-    x2, y2 = b
-    dot = x1*x2 + y1*y2      # dot product
-    det = x1*y2 - y1*x2      # determinant
-    angle = math.atan2(det, dot)  # atan2(y, x) or atan2(sin, cos)
-    return angle
-
 rep_pattern_w = _2D_square_world_(500)
 
 def fill_in_with_circular_pattern (world, density, amount_of_segments) :
@@ -129,7 +109,10 @@ def fill_in_with_circular_pattern (world, density, amount_of_segments) :
     check_calc = math.degrees(angle_bet_2vec(vector_start, vector_end))
     print check_calc
     print radius_of_one_strip
+    print vector_start
+    print vector_end
 
+    #add random points within circle sector
     for x in range (density):
         #
         cx = current_random_x_num_in_range = random.uniform(world.min_x_range, world.max_x_range)
@@ -138,7 +121,23 @@ def fill_in_with_circular_pattern (world, density, amount_of_segments) :
         if(isInsideSector([cx,cy],[0,0],vector_start,vector_end,world.radius)):
             world.add_point(cx,cy)
 
-fill_in_with_circular_pattern(rep_pattern_w, 2000, 4)
+    #repeat segment across circle
+    new_arr = []
+    for p in range (len(world.points)):
+        point_radius = math.sqrt(world.points[p][0]*world.points[p][0]+world.points[p][1]*world.points[p][1])             
+        for re in range(amount_of_segments):
+            shift = math.radians(radius_of_one_strip*re)
+            angle = shift
+            X = (math.cos(angle) * world.points[p][0]) - (math.sin(angle) * world.points[p][1])
+            Y = (math.sin(angle) * world.points[p][0]) + (math.cos(angle) * world.points[p][1])
+            new_point_coord = [X,Y]
+            new_arr.append(new_point_coord)
+
+    #append new segments to array
+    for p in new_arr:
+        world.points.append(p)
+    
+fill_in_with_circular_pattern(rep_pattern_w, 500, 4)
 
 ##print rep_pattern_w.points
 
