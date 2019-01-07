@@ -64,7 +64,10 @@ class _2D_square_world_:
     def __init__ (self, size):
         self.width  = size / 2
         self.height = size / 2
-
+        self.size_int_range = [(-1)*(int(size/2)),(int(size/2))]
+        self.size_int_range_without_neg = [0, int(size)]
+        self.offset = int(size / 2)
+        
         left_top     = [((-1) * self.width), ((-1) * self.height)]
         right_top    = [self.width, ((-1) * self.height)]
         right_bottom = [self.width, self.height]
@@ -96,11 +99,11 @@ class _2D_square_world_:
         else:
             print err_mess
 
-SIZE_of_world = 6000
+SIZE_of_world = 600
 
 rep_pattern_w = _2D_square_world_(SIZE_of_world)
 
-def fill_in_with_circular_pattern (world, density, amount_of_segments) :
+def fill_in_with_circular_pattern (world, amount_of_segments) :
 
     full_angle_of_circle = float(360)
     radius_of_one_strip = float(full_angle_of_circle) / float(amount_of_segments)
@@ -115,31 +118,35 @@ def fill_in_with_circular_pattern (world, density, amount_of_segments) :
     print vector_end
 
     #add random points within circle sector
-    for x in range (density):
-        #
-        cx = current_random_x_num_in_range = random.uniform(world.min_x_range, world.max_x_range)
-        cy = current_random_y_num_in_range = random.uniform(world.min_y_range, world.max_y_range)
-        #sectorStart and end expressed in relative to center vectors
-        if(isInsideSector([cx,cy],[0,0],vector_start,vector_end,world.radius)):
-            world.add_point(cx,cy)
+    for xx in range (world.size_int_range_without_neg[1]):
+        for yy in range (world.size_int_range_without_neg[1]):
+            offset = world.offset
+            #decide if we place a point or not
+            current_decision = random.choice([True, False])
+            if (current_decision):
+                cx = xx
+                cy = yy
+                #sectorStart and end expressed in relative to center vectors
+                if(isInsideSector([cx,cy],[0,0],vector_start,vector_end,world.radius)):
+                    world.add_point(cx,cy)
 
-    #repeat segment across circle
-    new_arr = []
-    for p in range (len(world.points)):            
-        for re in range(amount_of_segments):
-            shift = math.radians(radius_of_one_strip*re)
-            angle = shift
-            X = (math.cos(angle) * world.points[p][0]) - (math.sin(angle) * world.points[p][1])
-            Y = (math.sin(angle) * world.points[p][0]) + (math.cos(angle) * world.points[p][1])
-            new_point_coord = [X,Y]
-            new_arr.append(new_point_coord)
-
-    #append new segments to array
-    for p in new_arr:
-        world.points.append(p)
+    #repeat segment across circle with shifted values
+##    new_arr = []
+##    for p in range (len(world.points)):            
+##        for re in range(amount_of_segments):
+##            shift = math.radians(radius_of_one_strip*re)
+##            angle = shift
+##            X = (math.cos(angle) * world.points[p][0]) - (math.sin(angle) * world.points[p][1])
+##            Y = (math.sin(angle) * world.points[p][0]) + (math.cos(angle) * world.points[p][1])
+##            new_point_coord = [X,Y]
+##            new_arr.append(new_point_coord)
+##
+##    #append new segments to array
+##    for p in new_arr:
+##        world.points.append(p)
 
 amount_of_segments = 8
-fill_in_with_circular_pattern(rep_pattern_w, 8500, amount_of_segments)
+fill_in_with_circular_pattern(rep_pattern_w, amount_of_segments)
 
 ##map depth map to proccess second stereo pair
 import cv2
@@ -147,9 +154,13 @@ import cv2
 depth_map = cv2.imread('asd.jpg',0)
 depth_map = cv2.resize(depth_map, (SIZE_of_world , SIZE_of_world))
 
-##--- translate coordinates of current world to image coordinates
+##--- simplify world
 offset = SIZE_of_world/2
 
+for p in range (len(rep_pattern_w.points)):
+    rep_pattern_w.points[p][0] = int(rep_pattern_w.points[p][0])
+    rep_pattern_w.points[p][1] = int(rep_pattern_w.points[p][1])
+    
 #create another world with shifted values
 # - - -
 # - - -
@@ -166,13 +177,16 @@ for p in range (len(rep_pattern_w.points)):
     pick_integer_for_row    = int(rep_pattern_w.points[p][1]+offset)
     pick_integer_for_column = int(rep_pattern_w.points[p][0]+offset)
     shift_val = depth_map[pick_integer_for_row][pick_integer_for_column]
+    
     full_angle_of_circle = float(360)
     radius_of_one_strip = float(full_angle_of_circle) / float(amount_of_segments)
-    normalised_shift_val = map_range(shift_val, 0, 255, 0, radius_of_one_strip)
+    normalised_shift_val = map_range(shift_val, 0, 255, 0,  radius_of_one_strip)
     angle = math.radians(normalised_shift_val)
-    X = (math.cos(angle) * rep_pattern_w.points[p][0]) - (math.sin(angle) * rep_pattern_w.points[p][1])
-    Y = (math.sin(angle) * rep_pattern_w.points[p][0]) + (math.cos(angle) * rep_pattern_w.points[p][1])
-    shifted_pattern_w.add_point(X,Y)
+    X = int((math.cos(angle) * rep_pattern_w.points[p][0]) - (math.sin(angle) * rep_pattern_w.points[p][1]))
+    Y = int((math.sin(angle) * rep_pattern_w.points[p][0]) + (math.cos(angle) * rep_pattern_w.points[p][1]))
+    for p2 in range (len(rep_pattern_w.points)):
+        if(rep_pattern_w.points[p2][0] == X and rep_pattern_w.points[p2][1] == Y):
+            shifted_pattern_w.add_point(X,Y)
     
 #add artificial corners to keep size of plot
 ##rep_pattern_w.add_point(rep_pattern_w.corners[0][0],rep_pattern_w.corners[0][1])
@@ -191,11 +205,11 @@ plt.axis('off')
 plt.show ( )
 
 ##plot data
-data = np.array(shifted_pattern_w.points)
-x, y = data.T
-plt.scatter(x,y,marker='o',linewidth=None,s=0.25)
-plt.axis('equal')
-plt.axis('off')
-plt.show (  )
+##data = np.array(shifted_pattern_w.points)
+##x, y = data.T
+##plt.scatter(x,y,marker='o',linewidth=None,s=0.25)
+##plt.axis('equal')
+##plt.axis('off')
+##plt.show (  )
 
 
